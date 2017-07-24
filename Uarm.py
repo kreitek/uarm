@@ -1,28 +1,33 @@
-#TODO check if serial is installed
-import serial   # pyserial
+try:
+    import serial # pyserial
+except ImportError:
+    print("Some libraries are needed. run \"pip3 install -r requirements.txt\" to install them.")
+    quit()
 
 class Uarm:
+    """ Library for Uarm Swift Pro"""
+    MAX_SPEED = 7000 # Maximum speed allow by the arm
+    DEF_SPEED = 5000 # Default speed
 
-    """ Envia comandos GCode al brazo Uarm Swift Pro"""
-    def __init__(self, puerto, baudrate = 57600):
-        self.ser = serial.Serial(puerto, baudrate)
+    def __init__(self, port, baudrate = 115200):
+        self.ser = serial.Serial(port, baudrate)
         self.__index = 0
-        self.__speed = 5000
+        self.speed = self.DEF_SPEED
 
-    # getters setters
     # TODO check types and ranges
     @property
     def speed(self):
-        """ Get the default speed """
         return self.__speed
 
     @speed.setter
     def speed(self, value):
-        """ Set the default speed """
-        if value <= 0:
-            raise ValueError("Only positive non zero speed values")
-        self.__speed = value
-        return self.__speed
+        _value = int(value)
+        if _value <= 0:
+            # raise ValueError("Only positive non zero speed values")
+            print("WARNING - Only positive non zero speed values")
+            self.__speed = self.DEF_SPEED
+        else:
+            self.__speed = _value
 
     @property
     def index(self):
@@ -31,26 +36,35 @@ class Uarm:
 
     # ===================
     def send(self, string):
-        """ Manda cadena en crudo """
+        """ Send raw GCode string """
         if type(string) != type(str()):
-            print("DEBUG: variable " + str(type(string)) + ". Se requiere str.")
+            print("ERROR: variable " + str(type(string)) + " must be a str.")
             return
         self.ser.write(string.encode('utf-8'))
         #self.ser.write(b'blablabla\n')
 
     def move(self, x, y, z, speed = None):
-        """ Mueve el brazo a una posicion absoluta """
+        """ Move the arm to an absolute position """
         #protocol example "#25 G0 X180 Y0 Z150 F5000"
-        #TODO comprobar float y otros tipos
-        #TODO comprobar si el punto es alcanzable
+        _x = int(x)
+        _y = int(y)
+        _z = int(z)
+        if (not self.check_reachable(_x, _y, _z)):
+            print("ERROR - the point {0}, {1}, {2} is not reachable".format(_x, _y, _z))
+            return False
+        self.__index += 1
         if speed == None:
-            speed = self.__speed
+            speed = self.speed
         message = "#{0} G0 X{1} Y{2} Z{3} F{4}\n".format(self.__index, x, y, z, speed)
         self.ser.write(message.encode('utf-8'))
-        self.__index += 1
-        #TODO esperar por respuest
-        #TODO verificar respuesta
+        #TODO wait for response
+        #TODO check response
+        return True
+
+    def check_reachable(self, x, y, z):
+        # TODO check if reachable
+        return True
 
     def close(self):
-        """ Cierra la conexion serie """
+        """ Close serial connexion """
         self.ser.close()    # close port
