@@ -4,13 +4,33 @@ from Uarm import Uarm
 from sys import platform
 
 if platform == "win32":
-    arm = Uarm('COM7', baudrate = 9600)
+    arm = Uarm('COM7', baudrate=115200)
 else:
-    arm = Uarm('/dev/pts/1')
-arm.move(10, 20, 30)
-arm.move(100, 200, 300)
-arm.move(1000, 2000, 3000)
-arm.speed = 4500
+    arm = Uarm('/dev/ttyACM0')
+
+print(dir(arm))
+
+arm.mode(0)  # default mode for pump or gripper
+
+arm.move(0, 0, 0)  # Move to an absolute x, y, z position
+
+arm.speed = 2000  # set the default speed from now on
+
+arm.move(50, 75, -25)  # Move to an absolute x, y, z position
+
+arm.pump(True)
+# arm.gripper(True)
+
+arm.pause(3)
+
+arm.pump(False)
+# arm.gripper(False)
+
+arm.moverel(-50, 0, 0)  # Move to a relative x, y, z position
+
+# arm.sendraw("G2204 X0 Y0 Z50 F1000") # send custom gcode
+
 print("Current speed: ", arm.speed)
 print("Last index: ", arm.index)
+input("press any key to disconect")
 arm.close()
