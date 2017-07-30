@@ -8,15 +8,6 @@ if platform == "win32":
 else:
     arm = Uarm('/dev/ttyACM0', debug=True)
 
-
-
-
-# arm.pause(3)
-# arm.wrist(180)
-# arm.pause(3)
-# arm.wrist(90)
-# arm.pause(3)
-
 arm.speed = 7000  # set the default speed from now on
 
 if False:  # Test
@@ -41,7 +32,7 @@ if False:
     # arm.gripper(False)
     arm.move(150, 0, 70)
 
-if True:
+if True: # goes down until reach some object
     # arm.mode(0)  # default mode for pump or gripper
     arm.move(150, 0, 100)  # Move to an absolute x, y, z position
     arm.pumpswitch(True)
