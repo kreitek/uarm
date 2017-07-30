@@ -10,18 +10,23 @@ class Uarm:
     """ Library for Uarm Swift Pro"""
     MAX_SPEED = 7000  # TODO findout max speed
     DEF_SPEED = 5000  # Default speed
+    debug = False
 
-    def __init__(self, port, baudrate=115200):
+    def __init__(self, port, baudrate=115200, debug = False):
+        self.debug = debug
         self.__index = 0
         self.__speed = self.DEF_SPEED
         try:
-            self.ser = serial.Serial(port, baudrate)
+            self.ser = serial.Serial(port, baudrate, timeout=1)
         except:
             print("ERROR - Couldn't open {} port".format(port))
             quit()
         time.sleep(1)
         while self.ser.inWaiting() > 0:
-            print("DEBUG - ", self.ser.readline())
+            line = self.ser.readline()
+            if (self.debug): print("DEBUG - ", line)
+            if line.startswith('@5'.encode('utf-8')):
+                print("@5")
             time.sleep(0.1)
         time.sleep(1)
         print("uArm connected to {}".format(port))
@@ -51,12 +56,12 @@ class Uarm:
 
     def sendraw(self, string):
         """ Send a raw GCode string """
-        print("DEBUG - gcode sent: " + string)
         if type(string) != type(''):
-            print("ERROR: argument {} must be a str.".format(type(string)))
+            print("ERROR - argument {} must be a str.".format(type(string)))
             return
         string += '\n'
         self.ser.write(string.encode('utf-8'))
+        if (self.debug): print("DEBUG - gcode sent: " + string, end='')
         self._check_response()
 
     def move(self, x, y, z, speed=None):
@@ -100,6 +105,10 @@ class Uarm:
         self.sendraw("M2232 V{}".format(var))  # Gripper open/close
         return True
 
+    def wrist(self, angle):
+        self.sendraw("G2202 N3 V{}".format(angle))
+        return True
+
     def close(self):
         """ Close serial connexion and release the arm"""
         self.ser.close()  # close port
@@ -119,7 +128,8 @@ class Uarm:
         return True
 
     def _check_response(self):
+        time.sleep(0.2)
         response = self.ser.readline()
-        print("DEBUG - response: '{}'". format(response))
+        if (self.debug): print("DEBUG - response: '{}'". format(response))
         # TODO check response
         return True

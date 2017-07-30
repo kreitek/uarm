@@ -6,27 +6,32 @@ from sys import platform
 if platform == "win32":
     arm = Uarm('COM7', baudrate=115200)
 else:
-    arm = Uarm('/dev/ttyACM0')
+    arm = Uarm('/dev/ttyACM0', debug=True)
 
-print(dir(arm))
+# arm.wrist(0)
+# arm.pause(3)
+# arm.wrist(180)
+# arm.pause(3)
+# arm.wrist(90)
+# arm.pause(3)
 
 arm.mode(0)  # default mode for pump or gripper
 
-arm.move(0, 0, 0)  # Move to an absolute x, y, z position
+arm.move(50, 0, 50)  # Move to an absolute x, y, z position
 
 arm.speed = 2000  # set the default speed from now on
 
-arm.move(50, 75, -25)  # Move to an absolute x, y, z position
+arm.moverel(0, 0, -25)  # Move to a relative x, y, z position
 
-arm.pump(True)
+#arm.pump(True)
 # arm.gripper(True)
 
-arm.pause(3)
+#arm.pause(3)
 
-arm.pump(False)
+#arm.pump(False)
 # arm.gripper(False)
 
-arm.moverel(-50, 0, 0)  # Move to a relative x, y, z position
+
 
 # arm.sendraw("G2204 X0 Y0 Z50 F1000") # send custom gcode
 
