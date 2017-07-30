@@ -1,6 +1,7 @@
 try:
     import serial  # pyserial
     import time
+    import _thread
 except ImportError:
     print("Some libraries are needed. Run \"pip3 install -r requirements.txt\" to install them.")
     quit()
@@ -11,6 +12,10 @@ class Uarm:
     MAX_SPEED = 7000  # TODO findout max speed
     DEF_SPEED = 5000  # Default speed
     debug = False
+    switch = False #  Flag for endeffector switch
+    connected = False
+    ack = False
+    response = b'ok \r\n'
 
     def __init__(self, port, baudrate=115200, debug = False):
         self.debug = debug
@@ -21,15 +26,28 @@ class Uarm:
         except:
             print("ERROR - Couldn't open {} port".format(port))
             quit()
-        time.sleep(1)
-        while self.ser.inWaiting() > 0:
-            line = self.ser.readline()
-            if (self.debug): print("DEBUG - ", line)
-            if line.startswith('@5'.encode('utf-8')):
-                print("@5")
+        self.ser.flush()
+        try:
+            _thread.start_new_thread(self.serialcheckthread, ( 0.05,))
+        except:
+            print("Error: unable to start thread")
+            quit()
+        while True:
+            if self.connected:
+                break
             time.sleep(0.1)
-        time.sleep(1)
+        # self.waitfor('@5')  # Report event of power connection
+        # time.sleep(1)
+        # while self.ser.inWaiting() > 0:
+        #     line = self.ser.readline()
+        #     if (self.debug): print("DEBUG - ", line)
+        #     if line.startswith('@5'.encode('utf-8')):
+        #         print("@5")
+        #     time.sleep(0.1)
+        # time.sleep(1)
         print("uArm connected to {}".format(port))
+
+        self.sendraw("M2213 V0")  # default buttons false
 
     # TODO check types and ranges
     @property
@@ -54,33 +72,53 @@ class Uarm:
 
     # Public Methods ==================================================================
 
+    # receive thread
+    def serialcheckthread(self, delay):
+        while True:
+            if self.ser.inWaiting() > 0:
+                self.response = self.ser.readline()
+                if (self.debug): print("DEBUG - response: ", self.response)
+                if self.response.startswith('@6'.encode('utf-8')):
+                    self.switch = True
+                if self.response.startswith('@5'.encode('utf-8')):
+                    self.connected = True
+                if self.response.startswith('ok'.encode('utf-8')):
+                    self.ack = True
+            else:
+                time.sleep(delay)
+
     def sendraw(self, string):
         """ Send a raw GCode string """
+        self.ack = False
         if type(string) != type(''):
             print("ERROR - argument {} must be a str.".format(type(string)))
             return
         string += '\n'
         self.ser.write(string.encode('utf-8'))
         if (self.debug): print("DEBUG - gcode sent: " + string, end='')
-        self._check_response()
+        while not self.ack:
+            time.sleep(0.05)
+        return True
 
     def move(self, x, y, z, speed=None):
         """ Move the arm to an absolute x, y, z position """
-        pos = self._getcartesian(x, y, z)
         if speed is not None:
-            self.speed = speed
-        self.sendraw("G2204 X{} Y{} Z{} F{}".format(pos[0], pos[1], pos[2], self.__speed))  # Relative displacement
+            speed = self.speed
+        self.sendraw("G0 X{} Y{} Z{} F{}".format(x, y, z, self.__speed))  # Relative displacement
         return True
 
-    def moverel(self, x, y, z):
+    def moverel(self, x, y, z, speed=None):
         """ Move the arm to a relative x, y z position """
-        pos = self._getcartesian(x, y, z)
-        self.sendraw("G2204 X{} Y{} Z{} F{}".format(pos[0], pos[1], pos[2], self.__speed))  # Relative displacement
+        if speed is not None:
+            speed = self.speed
+        self.sendraw("G2204 X{} Y{} Z{} F{}".format(x, y, z, self.__speed))  # Relative displacement
         return True
 
     def pause(self, seconds):
         milisec = int(seconds) * 1000
-        self.sendraw("G2004 P{}".format(milisec))  # Pause
+        # self.sendraw("G2004 P{}".format(milisec))  # Pause
+        if (self.debug): print("DEBUG - pause {} seconds".format(seconds))
+        time.sleep(seconds)
         return True
 
     def mode(self, mode):
@@ -88,6 +126,13 @@ class Uarm:
             mode = 0
         self.sendraw("M2400 S{}".format(mode))  # Set mode 0 Normal 3 Universal holder
         return True
+
+    def pumpswitch(self, dir):
+        self.switch = False
+        while not self.switch:
+            self.moverel(0, 0, -1, speed=1500)
+        #  self.sendraw('G2203') # Stop moving
+        self.pump(dir)
 
     def pump(self, active):
         if active:
@@ -109,27 +154,25 @@ class Uarm:
         self.sendraw("G2202 N3 V{}".format(angle))
         return True
 
+    # def waitfor(self, string):
+    #     delay = 0.05
+    #     for i in range(int(60/delay)):  # wait for 10 seconds
+    #         if self.response.startswith(string.encode('utf-8')):
+    #         #if self.response[0:2] == b'ok':
+    #             break
+    #         time.sleep(delay)
+    #     else:
+    #         print ("ERROR - No aknoledge receive from arm")
+    #         self.close()
+    #         quit()
+    #     self.response=b'' # clear response
+
     def close(self):
         """ Close serial connexion and release the arm"""
         self.ser.close()  # close port
 
     # Private Methods ==================================================================
 
-    @staticmethod
-    def _getcartesian(x, y, z):
-        try:
-            response = (int(x), int(y), int(z))
-        except:
-            response = (0, 0, 0)
-        return response
-
     def check_reachable(self, x, y, z):
         # TODO check if reachable
-        return True
-
-    def _check_response(self):
-        time.sleep(0.2)
-        response = self.ser.readline()
-        if (self.debug): print("DEBUG - response: '{}'". format(response))
-        # TODO check response
         return True
