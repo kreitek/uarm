@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/bin/env python3
 
 from Uarm import Uarm
 from sys import platform
@@ -13,11 +13,11 @@ arm.speed = 7000  # set the default speed from now on
 if False:  # Test
     arm.move(180, 180, 30)  # Move to an absolute x, y, z position
     arm.pause(1)
-    arm.move(180, -180, 30)  # Move to an absolute x, y, z position
+    arm.move(180, -180, 30, speed=500)  # Move with custom speed
     arm.pause(1)
-    arm.move(255, 0, 150)  # Move to an absolute x, y, z position
+    arm.move(255, 0, 150)
     arm.pause(1)
-    arm.move(150, 0, 30)  # Move to an absolute x, y, z position
+    arm.move(150, 0, 30)
 
 if False:
     # arm.mode(0)  # default mode for pump or gripper
@@ -26,16 +26,16 @@ if False:
     arm.pump(True)
     # arm.gripper(True)
     arm.pause(1)
-    arm.moverel(0,70,0)
+    arm.moverel(0, 70, 0)  # Move to a relative position
     arm.pause(1)
     arm.pump(False)
     # arm.gripper(False)
     arm.move(150, 0, 70)
 
-if True: # goes down until reach some object
+if True:
     # arm.mode(0)  # default mode for pump or gripper
-    arm.move(150, 0, 100)  # Move to an absolute x, y, z position
-    arm.pumpswitch(True)
+    arm.move(150, 0, 150)
+    arm.pumpswitch(True)  # goes down until reach some object
     arm.moverel(0, 0, +50)
     arm.pause(1)
     arm.moverel(0, 70, 0)

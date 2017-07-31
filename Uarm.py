@@ -12,12 +12,12 @@ class Uarm:
     MAX_SPEED = 7000  # TODO findout max speed
     DEF_SPEED = 5000  # Default speed
     debug = False
-    switch = False #  Flag for endeffector switch
+    switch = False  # Flag for endeffector switch
     connected = False
     ack = False
     response = b'ok \r\n'
 
-    def __init__(self, port, baudrate=115200, debug = False):
+    def __init__(self, port, baudrate=115200, debug=False):
         self.debug = debug
         self.__index = 0
         self.__speed = self.DEF_SPEED
@@ -28,7 +28,7 @@ class Uarm:
             quit()
         self.ser.flush()
         try:
-            _thread.start_new_thread(self.serialcheckthread, ( 0.05,))
+            _thread.start_new_thread(self.serialcheckthread, (0.05,))
         except:
             print("Error: unable to start thread")
             quit()
@@ -77,13 +77,16 @@ class Uarm:
         while True:
             if self.ser.inWaiting() > 0:
                 self.response = self.ser.readline()
-                if (self.debug): print("DEBUG - response: ", self.response)
-                if self.response.startswith('@6'.encode('utf-8')):
-                    self.switch = True
-                if self.response.startswith('@5'.encode('utf-8')):
-                    self.connected = True
+                if self.debug: print("DEBUG - response: ", self.response)
                 if self.response.startswith('ok'.encode('utf-8')):
                     self.ack = True
+                elif self.response.startswith('@6'.encode('utf-8')):
+                    self.switch = True
+                elif self.response.startswith('E22'.encode('utf-8')):
+                    print("ERROR - Point not reachable")
+                    self.ack = True
+                elif self.response.startswith('@5'.encode('utf-8')):
+                    self.connected = True
             else:
                 time.sleep(delay)
 
@@ -95,7 +98,7 @@ class Uarm:
             return
         string += '\n'
         self.ser.write(string.encode('utf-8'))
-        if (self.debug): print("DEBUG - gcode sent: " + string, end='')
+        if self.debug: print("DEBUG - gcode sent: " + string, end='')
         while not self.ack:
             time.sleep(0.05)
         return True
@@ -104,20 +107,20 @@ class Uarm:
         """ Move the arm to an absolute x, y, z position """
         if speed is not None:
             speed = self.speed
-        self.sendraw("G0 X{} Y{} Z{} F{}".format(x, y, z, self.__speed))  # Relative displacement
+        self.sendraw("G0 X{} Y{} Z{} F{}".format(x, y, z, speed))  # Relative displacement
         return True
 
     def moverel(self, x, y, z, speed=None):
         """ Move the arm to a relative x, y z position """
         if speed is not None:
             speed = self.speed
-        self.sendraw("G2204 X{} Y{} Z{} F{}".format(x, y, z, self.__speed))  # Relative displacement
+        self.sendraw("G2204 X{} Y{} Z{} F{}".format(x, y, z, speed))  # Relative displacement
         return True
 
     def pause(self, seconds):
-        milisec = int(seconds) * 1000
+        # milisec = int(seconds) * 1000
         # self.sendraw("G2004 P{}".format(milisec))  # Pause
-        if (self.debug): print("DEBUG - pause {} seconds".format(seconds))
+        if self.debug: print("DEBUG - pause {} seconds".format(seconds))
         time.sleep(seconds)
         return True
 
@@ -127,12 +130,12 @@ class Uarm:
         self.sendraw("M2400 S{}".format(mode))  # Set mode 0 Normal 3 Universal holder
         return True
 
-    def pumpswitch(self, dir):
+    def pumpswitch(self, dire):
         self.switch = False
         while not self.switch:
             self.moverel(0, 0, -1, speed=1500)
-        #  self.sendraw('G2203') # Stop moving
-        self.pump(dir)
+        # self.sendraw('G2203') # Stop moving
+        self.pump(dire)
 
     def pump(self, active):
         if active:
