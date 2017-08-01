@@ -105,14 +105,14 @@ class Uarm:
 
     def move(self, x, y, z, speed=None):
         """ Move the arm to an absolute x, y, z position """
-        if speed is not None:
+        if speed is None:
             speed = self.speed
         self.sendraw("G0 X{} Y{} Z{} F{}".format(x, y, z, speed))  # Relative displacement
         return True
 
     def moverel(self, x, y, z, speed=None):
         """ Move the arm to a relative x, y z position """
-        if speed is not None:
+        if speed is None:
             speed = self.speed
         self.sendraw("G2204 X{} Y{} Z{} F{}".format(x, y, z, speed))  # Relative displacement
         return True
