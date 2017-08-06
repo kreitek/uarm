@@ -26,16 +26,15 @@ class Uarm:
         except:
             print("ERROR - Couldn't open {} port".format(port))
             quit()
-        self.ser.flush()
         try:
-            _thread.start_new_thread(self.serialcheckthread, (0.05,))
+            _thread.start_new_thread(self._serialcheckthread, (0.05,))
         except:
             print("Error: unable to start thread")
             quit()
-        while True:
-            if self.connected:
-                break
+        while not self.connected:
             time.sleep(0.1)
+        time.sleep(1) # Sometimes it reports more initial stuff
+        self.switch = self.ack = False
         # self.waitfor('@5')  # Report event of power connection
         # time.sleep(1)
         # while self.ser.inWaiting() > 0:
@@ -73,7 +72,7 @@ class Uarm:
     # Public Methods ==================================================================
 
     # receive thread
-    def serialcheckthread(self, delay):
+    def _serialcheckthread(self, delay):
         while True:
             if self.ser.inWaiting() > 0:
                 self.response = self.ser.readline()
@@ -93,7 +92,7 @@ class Uarm:
     def sendraw(self, string):
         """ Send a raw GCode string """
         self.ack = False
-        if type(string) != type(''):
+        if type(string) != str:
             print("ERROR - argument {} must be a str.".format(type(string)))
             return
         string += '\n'
@@ -154,8 +153,24 @@ class Uarm:
         return True
 
     def wrist(self, angle):
+        """ Set wist servo to a specific angle"""
         self.sendraw("G2202 N3 V{}".format(angle))
         return True
+
+    def attach_all(self, truefalse):
+        """Energize / Deenergize all the motors"""
+        if truefalse:
+            self.sendraw("M17")
+        else:
+            self.sendraw("M2019")
+
+    def report_pos(self, seconds):
+        """ Reports arm position every x seconds
+        format of response: @3 X154.71 Y194.91 Z10.21"""
+        if seconds==False or seconds<0:
+            seconds = 0
+        self.sendraw("M2120 V{}".format(seconds))
+
 
     # def waitfor(self, string):
     #     delay = 0.05
